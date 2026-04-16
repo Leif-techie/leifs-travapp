@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trav – Voltstart spioner (nr 1 &amp; 3)</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --border: #2a2d3a;
+      --accent: #4f8ef7;
+      --green: #3ecf8e;
+      --yellow: #f5c518;
+      --red: #e05252;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --horse1: #1e3a5f;
+      --horse3: #1e3a30;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+    }
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .meta span { white-space: nowrap; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-volt { background: #2d1f6b; color: #a78bfa; }
+    .badge-1 { background: var(--horse1); color: #93c5fd; }
+    .badge-3 { background: var(--horse3); color: #6ee7b7; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn:hover { background: #252836; border-color: var(--accent); }
+    .btn.loading { opacity: 0.6; pointer-events: none; }
+
+    main { padding: 20px 16px; }
+
+    .error-box {
+      background: #3b1515;
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      color: #fca5a5;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .stat-chip strong { color: var(--text); font-size: 16px; display: block; }
+
+    .countdown {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .countdown strong { color: var(--yellow); }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 960px;
+    }
+    thead tr {
+      background: #13161f;
+    }
+    thead th {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { color: var(--text); }
+    thead th.sorted-asc::after { content: " ▲"; color: var(--accent); }
+    thead th.sorted-desc::after { content: " ▼"; color: var(--accent); }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: #1e2130; }
+    tbody tr.start-1 { border-left: 3px solid #4f8ef7; }
+    tbody tr.start-3 { border-left: 3px solid #3ecf8e; }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 10px 12px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .horse-name { font-weight: 600; color: var(--text); }
+    .track { font-size: 12px; color: var(--muted); }
+    .race-ref { font-weight: 600; color: var(--accent); }
+
+    .odds-win {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--yellow);
+    }
+    .odds-place { font-size: 13px; color: #94a3b8; }
+    .odds-no { color: var(--muted); }
+
+    .driver-cell { min-width: 140px; }
+    .driver-name { font-weight: 500; }
+    .driver-stats {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .pct-good { color: var(--green); }
+    .pct-mid { color: var(--yellow); }
+    .pct-low { color: var(--muted); }
+
+    .form-cell { min-width: 180px; }
+    .form-list { display: flex; flex-direction: column; gap: 3px; }
+    .form-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+    .place-badge {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      line-height: 22px;
+      text-align: center;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .place-1 { background: #854d0e; color: #fef08a; }
+    .place-2 { background: #1e3a5f; color: #93c5fd; }
+    .place-3 { background: #1e3a30; color: #6ee7b7; }
+    .place-other { background: #1e2130; color: #64748b; }
+    .form-meta { color: var(--muted); }
+    .no-form { color: var(--muted); font-size: 11px; font-style: italic; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state h2 { font-size: 1.1rem; margin-bottom: 8px; color: var(--text); }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 11px;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 10px 12px; }
+      main { padding: 12px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🏇 Voltstart Scout</h1>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+      Startplatser 1 &amp; 3 · Voltstart · Svenska travlopp · {{ today }}
+    </div>
+  </div>
+  <div class="meta">
+    {% if last_updated %}
+    <span>Uppdaterad: <strong style="color:var(--text)">{{ last_updated }}</strong></span>
+    {% endif %}
+    <div id="countdown" class="countdown">
+      Nästa uppdatering: <strong id="countdown-time">–</strong>
+    </div>
+    <button class="btn" id="refresh-btn" onclick="manualRefresh()">
+      <span id="refresh-icon">↻</span> Uppdatera nu
+    </button>
+  </div>
+</header>
+
+<main>
+  {% if error %}
+  <div class="error-box">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <div class="stats-bar">
+    <div class="stat-chip">
+      <strong>{{ rows | length }}</strong>
+      Hästar visade
+    </div>
+    <div class="stat-chip">
+      <strong>{{ rows | map(attribute='track') | unique | list | length }}</strong>
+      Travbanor
+    </div>
+    <div class="stat-chip" style="display:flex;gap:10px;align-items:center">
+      <span><span class="badge badge-1">#1</span> Startplats 1</span>
+      <span><span class="badge badge-3">#3</span> Startplats 3</span>
+      <span><span class="badge badge-volt">V</span> Voltstart</span>
+    </div>
+  </div>
+
+  {% if rows %}
+  <div class="table-wrap">
+    <table id="main-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">Bana / Lopp</th>
+          <th onclick="sortTable(1)">Tid</th>
+          <th onclick="sortTable(2)">Start#</th>
+          <th onclick="sortTable(3)">Häst</th>
+          <th onclick="sortTable(4)">Vinnarodds</th>
+          <th onclick="sortTable(5)">Platsodds</th>
+          <th onclick="sortTable(6)">Kusk</th>
+          <th>Kusk seger% 2025 / 2026</th>
+          <th>Kusk top3% 2025 / 2026</th>
+          <th onclick="sortTable(9)">Senaste form</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="start-{{ r.start_nr }}">
+          <!-- Bana / Lopp -->
+          <td>
+            <div class="race-ref">Lopp {{ r.race_number }}</div>
+            <div class="track">{{ r.track }}</div>
+          </td>
+          <!-- Tid -->
+          <td style="font-weight:600">{{ r.race_time }}</td>
+          <!-- Start# -->
+          <td>
+            <span class="badge {% if r.start_nr == 1 %}badge-1{% else %}badge-3{% endif %}">
+              #{{ r.start_nr }}
+            </span>
+          </td>
+          <!-- Häst -->
+          <td class="horse-name">{{ r.horse_name }}</td>
+          <!-- Vinnarodds -->
+          <td>
+            {% if r.win_odds != '-' %}
+            <span class="odds-win">{{ r.win_odds }}</span>
+            {% else %}
+            <span class="odds-no">–</span>
+            {% endif %}
+          </td>
+          <!-- Platsodds -->
+          <td>
+            {% if r.place_odds != '-' %}
+            <span class="odds-place">{{ r.place_odds }}</span>
+            {% else %}
+            <span class="odds-no">–</span>
+            {% endif %}
+          </td>
+          <!-- Kusk -->
+          <td class="driver-cell">
+            <div class="driver-name">{{ r.driver_name }}</div>
+            <div class="driver-stats">{{ r.driver_starts_2025 }} st 2025 · {{ r.driver_starts_2026 }} st 2026</div>
+          </td>
+          <!-- Kusk seger% -->
+          <td>
+            <div>
+              <span class="{{ 'pct-good' if r.win_pct_2025 not in ['-','0%'] else 'pct-low' }}">{{ r.win_pct_2025 }}</span>
+              <span style="color:var(--muted)"> / </span>
+              <span class="{{ 'pct-good' if r.win_pct_2026 not in ['-','0%'] else 'pct-low' }}">{{ r.win_pct_2026 }}</span>
+            </div>
+          </td>
+          <!-- Kusk top3% -->
+          <td>
+            <div>
+              <span class="{{ 'pct-good' if r.top3_pct_2025 not in ['-','0%'] else 'pct-low' }}">{{ r.top3_pct_2025 }}</span>
+              <span style="color:var(--muted)"> / </span>
+              <span class="{{ 'pct-good' if r.top3_pct_2026 not in ['-','0%'] else 'pct-low' }}">{{ r.top3_pct_2026 }}</span>
+            </div>
+          </td>
+          <!-- Senaste form -->
+          <td class="form-cell">
+            {% if r.recent_records %}
+            <div class="form-list">
+              {% for rec in r.recent_records %}
+              <div class="form-item">
+                <span class="place-badge {% if rec.place == 1 %}place-1{% elif rec.place == 2 %}place-2{% elif rec.place == 3 %}place-3{% else %}place-other{% endif %}">
+                  {{ rec.place }}
+                </span>
+                <span class="form-meta">{{ rec.start_type }}{{ rec.distance }} {{ rec.time }} ({{ rec.year }})</span>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <span class="no-form">Ingen data</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <h2>Inga lopp hittades</h2>
+    <p>Inga svenska voltstart-lopp med startplats 1 eller 3 är tillgängliga just nu.</p>
+    <p style="margin-top:8px;font-size:12px">Kontrollera om det är tävlingsdag och försök igen lite senare.</p>
+  </div>
+  {% endif %}
+</main>
+
+<footer>
+  Data från ATG · Uppdateras automatiskt var 3:e timme · Voltstart Scout
+</footer>
+
+<script>
+  const NEXT_UPDATE_TS = {{ next_update_ts }};
+
+  function updateCountdown() {
+    const now = Date.now();
+    const diff = NEXT_UPDATE_TS - now;
+    const el = document.getElementById('countdown-time');
+    if (!el) return;
+    if (diff <= 0) {
+      el.textContent = 'Uppdaterar…';
+      setTimeout(() => location.reload(), 2000);
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${h}h ${m.toString().padStart(2,'0')}m ${s.toString().padStart(2,'0')}s`;
+  }
+
+  setInterval(updateCountdown, 1000);
+  updateCountdown();
+
+  async function manualRefresh() {
+    const btn = document.getElementById('refresh-btn');
+    const icon = document.getElementById('refresh-icon');
+    btn.classList.add('loading');
+    icon.textContent = '⟳';
+    try {
+      await fetch('/api/refresh', { method: 'POST' });
+      location.reload();
+    } catch (e) {
+      btn.classList.remove('loading');
+      icon.textContent = '↻';
+      alert('Kunde inte uppdatera. Försök igen.');
+    }
+  }
+
+  // Tabell-sortering
+  let sortCol = -1, sortAsc = true;
+  function sortTable(col) {
+    const table = document.getElementById('main-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const ths = table.querySelectorAll('thead th');
+
+    ths.forEach(th => th.classList.remove('sorted-asc', 'sorted-desc'));
+
+    if (sortCol === col) {
+      sortAsc = !sortAsc;
+    } else {
+      sortCol = col;
+      sortAsc = true;
+    }
+    ths[col].classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
+
+    rows.sort((a, b) => {
+      const aVal = a.querySelectorAll('td')[col].textContent.trim();
+      const bVal = b.querySelectorAll('td')[col].textContent.trim();
+      const aNum = parseFloat(aVal);
+      const bNum = parseFloat(bVal);
+      let cmp;
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        cmp = aNum - bNum;
+      } else {
+        cmp = aVal.localeCompare(bVal, 'sv');
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+
+    rows.forEach(r => tbody.appendChild(r));
+  }
+</script>
+</body>
+</html>

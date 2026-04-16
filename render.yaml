@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: travprojekt
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 1 --bind 0.0.0.0:$PORT app:app
