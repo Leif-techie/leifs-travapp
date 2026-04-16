@@ -78,7 +78,7 @@ def get_recent_records(horse):
 
 
 def fetch_todays_races():
-    """Hämtar alla lopp med voltstart och startplatserna 1 och 3 för idag."""
+    """Hämtar alla lopp med voltstart och startplats 1 för idag."""
     today = date.today().isoformat()
     try:
         resp = requests.get(f"{ATG_BASE}/calendar/day/{today}", headers=HEADERS, timeout=15)
@@ -130,12 +130,12 @@ def fetch_todays_races():
         except Exception:
             time_str = race_time
 
-        # Filtrera startplatser 1 och 3
+        # Filtrera startplats 1
         for start in race.get("starts", []):
             if start.get("scratched"):
                 continue
             start_nr = start.get("number")
-            if start_nr not in (1, 3):
+            if start_nr != 1:
                 continue
 
             horse = start.get("horse", {})

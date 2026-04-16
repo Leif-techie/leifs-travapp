@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trav – Voltstart spioner (nr 1 &amp; 3)</title>
+  <title>Trav – Voltstart spioner (nr 1)</title>
   <style>
     :root {
       --bg: #0f1117;
@@ -15,8 +15,6 @@
       --red: #e05252;
       --text: #e2e8f0;
       --muted: #8892a4;
-      --horse1: #1e3a5f;
-      --horse3: #1e3a30;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -39,8 +37,9 @@
     header h1 {
       font-size: 1.2rem;
       font-weight: 700;
-      color: var(--accent);
+      color: #e05252;
       letter-spacing: 0.02em;
+      margin-bottom: 0;
     }
     .meta {
       font-size: 12px;
@@ -51,16 +50,6 @@
       flex-wrap: wrap;
     }
     .meta span { white-space: nowrap; }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .badge-volt { background: #2d1f6b; color: #a78bfa; }
-    .badge-1 { background: var(--horse1); color: #93c5fd; }
-    .badge-3 { background: var(--horse3); color: #6ee7b7; }
     .btn {
       display: inline-flex;
       align-items: center;
@@ -151,7 +140,6 @@
     }
     tbody tr:hover { background: #1e2130; }
     tbody tr.start-1 { border-left: 3px solid #4f8ef7; }
-    tbody tr.start-3 { border-left: 3px solid #3ecf8e; }
     tbody tr:last-child { border-bottom: none; }
 
     td {
@@ -161,8 +149,9 @@
     }
 
     .horse-name { font-weight: 600; color: var(--text); }
-    .track { font-size: 12px; color: var(--muted); }
-    .race-ref { font-weight: 600; color: var(--accent); }
+    .track-name { font-weight: 600; color: var(--text); }
+    .race-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .race-ref { font-weight: 600; color: var(--accent); margin-top: 2px; }
 
     .odds-win {
       font-weight: 700;
@@ -234,9 +223,9 @@
 
 <header>
   <div>
-    <h1>🏇 Voltstart Scout</h1>
-    <div style="font-size:12px;color:var(--muted);margin-top:4px;">
-      Startplatser 1 &amp; 3 · Voltstart · Svenska travlopp · {{ today }}
+    <h1>🏇 Voltstart</h1>
+    <div style="font-size:1.2rem;font-weight:700;color:#e05252;letter-spacing:0.02em;margin-top:0;margin-left:1.8em;">
+      Spår 1
     </div>
   </div>
   <div class="meta">
@@ -266,11 +255,6 @@
       <strong>{{ rows | map(attribute='track') | unique | list | length }}</strong>
       Travbanor
     </div>
-    <div class="stat-chip" style="display:flex;gap:10px;align-items:center">
-      <span><span class="badge badge-1">#1</span> Startplats 1</span>
-      <span><span class="badge badge-3">#3</span> Startplats 3</span>
-      <span><span class="badge badge-volt">V</span> Voltstart</span>
-    </div>
   </div>
 
   {% if rows %}
@@ -280,14 +264,13 @@
         <tr>
           <th onclick="sortTable(0)">Bana / Lopp</th>
           <th onclick="sortTable(1)">Tid</th>
-          <th onclick="sortTable(2)">Start#</th>
-          <th onclick="sortTable(3)">Häst</th>
-          <th onclick="sortTable(4)">Vinnarodds</th>
-          <th onclick="sortTable(5)">Platsodds</th>
-          <th onclick="sortTable(6)">Kusk</th>
+          <th onclick="sortTable(2)">Häst</th>
+          <th onclick="sortTable(3)">Vinnarodds</th>
+          <th onclick="sortTable(4)">Platsodds</th>
+          <th onclick="sortTable(5)">Kusk</th>
           <th>Kusk seger% 2025 / 2026</th>
           <th>Kusk top3% 2025 / 2026</th>
-          <th onclick="sortTable(9)">Senaste form</th>
+          <th onclick="sortTable(8)">Senaste lopp</th>
         </tr>
       </thead>
       <tbody>
@@ -295,17 +278,12 @@
         <tr class="start-{{ r.start_nr }}">
           <!-- Bana / Lopp -->
           <td>
+            <div class="track-name">{{ r.track }}</div>
+            <div class="race-date">{{ today }}</div>
             <div class="race-ref">Lopp {{ r.race_number }}</div>
-            <div class="track">{{ r.track }}</div>
           </td>
           <!-- Tid -->
           <td style="font-weight:600">{{ r.race_time }}</td>
-          <!-- Start# -->
-          <td>
-            <span class="badge {% if r.start_nr == 1 %}badge-1{% else %}badge-3{% endif %}">
-              #{{ r.start_nr }}
-            </span>
-          </td>
           <!-- Häst -->
           <td class="horse-name">{{ r.horse_name }}</td>
           <!-- Vinnarodds -->
@@ -354,7 +332,7 @@
                 <span class="place-badge {% if rec.place == 1 %}place-1{% elif rec.place == 2 %}place-2{% elif rec.place == 3 %}place-3{% else %}place-other{% endif %}">
                   {{ rec.place }}
                 </span>
-                <span class="form-meta">{{ rec.start_type }}{{ rec.distance }} {{ rec.time }} ({{ rec.year }})</span>
+                <span class="form-meta">{{ rec.time }} ({{ rec.year }})</span>
               </div>
               {% endfor %}
             </div>
@@ -370,14 +348,14 @@
   {% else %}
   <div class="empty-state">
     <h2>Inga lopp hittades</h2>
-    <p>Inga svenska voltstart-lopp med startplats 1 eller 3 är tillgängliga just nu.</p>
+    <p>Inga svenska voltstart-lopp med startplats 1 är tillgängliga just nu.</p>
     <p style="margin-top:8px;font-size:12px">Kontrollera om det är tävlingsdag och försök igen lite senare.</p>
   </div>
   {% endif %}
 </main>
 
 <footer>
-  Data från ATG · Uppdateras automatiskt var 3:e timme · Voltstart Scout
+  Data från ATG · Uppdateras automatiskt var 3:e timme · Voltstart
 </footer>
 
 <script>

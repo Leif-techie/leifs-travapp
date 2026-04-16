@@ -1,6 +1,6 @@
 # Travprojekt
 
-Visar svenska travlopp med aktuell startlista där loppet har `voltstart`, filtrerat till startnummer `1` och `3`.
+Visar svenska travlopp med aktuell startlista där loppet har `voltstart`, filtrerat till startnummer `1`.
 
 ## Lokal start
 
