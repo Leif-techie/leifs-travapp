@@ -147,6 +147,19 @@ def fetch_todays_races():
             place_odds_raw = pools.get("plats", {}).get("minOdds")
             place_odds = format_odds(place_odds_raw)
 
+            result = start.get("result", {})
+            result_place = result.get("place") if result else None
+            kt = result.get("kmTime", {}) if result else {}
+            if kt and kt.get("seconds") is not None:
+                result_time = f"{kt.get('minutes', 1)}:{kt.get('seconds', 0):02}.{kt.get('tenths', 0)}"
+            else:
+                result_time = None
+            final_odds = result.get("finalOdds") if result else None
+            result_win_odds = f"{final_odds:.2f}" if final_odds else "-"
+            place_odds_result_raw = pools.get("plats", {}).get("odds")
+            result_place_odds = format_odds(place_odds_result_raw)
+            result_galloped = result.get("galloped", False) if result else False
+
             driver_name = f"{driver.get('firstName', '')} {driver.get('lastName', '')}".strip()
             trainer_name = f"{trainer.get('firstName', '')} {trainer.get('lastName', '')}".strip()
             dstats = driver_stats(driver)
@@ -163,6 +176,7 @@ def fetch_todays_races():
                 "track": track_name,
                 "race_number": race_number,
                 "race_time": time_str,
+                "race_id": race_id,
                 "horse_name": horse.get("name", "?"),
                 "start_nr": start_nr,
                 "win_odds": win_odds,
@@ -177,6 +191,11 @@ def fetch_todays_races():
                 "driver_starts_2026": dstats["starts_2026"],
                 "recent_records": recent,
                 "avg_odds_last5": avg_odds_str,
+                "result_place": result_place,
+                "result_time": result_time,
+                "result_win_odds": result_win_odds,
+                "result_place_odds": result_place_odds,
+                "result_galloped": result_galloped,
             })
 
     # Sortera på starttid, sedan loppnummer, sedan startnummer
