@@ -168,6 +168,12 @@
       color: var(--muted);
       margin-top: 2px;
     }
+    .trainer-name {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+      font-style: italic;
+    }
     .pct-good { color: var(--green); }
     .pct-mid { color: var(--yellow); }
     .pct-low { color: var(--muted); }
@@ -306,6 +312,7 @@
           <td class="driver-cell">
             <div class="driver-name">{{ r.driver_name }}</div>
             <div class="driver-stats">{{ r.driver_starts_2025 }} st 2025 · {{ r.driver_starts_2026 }} st 2026</div>
+            {% if r.trainer_name %}<div class="trainer-name">Tr: {{ r.trainer_name }}</div>{% endif %}
           </td>
           <!-- Kusk seger% -->
           <td>

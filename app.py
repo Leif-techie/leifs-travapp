@@ -140,6 +140,7 @@ def fetch_todays_races():
 
             horse = start.get("horse", {})
             driver = start.get("driver", {})
+            trainer = start.get("trainer", {})
             pools = start.get("pools", {})
 
             win_odds = format_odds(pools.get("vinnare", {}).get("odds"))
@@ -147,6 +148,7 @@ def fetch_todays_races():
             place_odds = format_odds(place_odds_raw)
 
             driver_name = f"{driver.get('firstName', '')} {driver.get('lastName', '')}".strip()
+            trainer_name = f"{trainer.get('firstName', '')} {trainer.get('lastName', '')}".strip()
             dstats = driver_stats(driver)
             recent = get_recent_records(horse)
 
@@ -166,6 +168,7 @@ def fetch_todays_races():
                 "win_odds": win_odds,
                 "place_odds": place_odds,
                 "driver_name": driver_name,
+                "trainer_name": trainer_name,
                 "win_pct_2025": dstats["win_pct_2025"],
                 "top3_pct_2025": dstats["top3_pct_2025"],
                 "win_pct_2026": dstats["win_pct_2026"],
