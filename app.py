@@ -140,7 +140,7 @@ def fetch_todays_races():
 
             horse = start.get("horse", {})
             driver = start.get("driver", {})
-            trainer = start.get("trainer", {})
+            trainer = horse.get("trainer", {})
             pools = start.get("pools", {})
 
             win_odds = format_odds(pools.get("vinnare", {}).get("odds"))
