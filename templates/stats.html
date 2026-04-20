@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trav – Fyraveckorsanalys Voltstart spår 1</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --border: #2a2d3a;
+      --accent: #4f8ef7;
+      --green: #3ecf8e;
+      --yellow: #f5c518;
+      --red: #e05252;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; color: #e05252; }
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .nav-link:hover { background: #252836; border-color: var(--accent); }
+
+    main { padding: 24px 20px; max-width: 1100px; margin: 0 auto; }
+
+    .page-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    .info-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    .info-box strong { color: var(--text); }
+
+    .no-data-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+    .no-data-box h2 { font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
+
+    /* Week sections */
+    .week-section {
+      margin-bottom: 32px;
+    }
+    .week-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .week-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .week-period {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 2px 7px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .badge-done   { background: #1e3a30; color: var(--green); border: 1px solid #2d5a48; }
+    .badge-active { background: #1e3258; color: #93c5fd;      border: 1px solid #2d4a7a; }
+    .badge-future { background: #2a2d3a; color: var(--muted); border: 1px solid var(--border); }
+    .report-note {
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    .stats-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .stats-card-header {
+      background: #13161f;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .stats-card-header.filtered { color: var(--accent); }
+    .stats-card-body { padding: 0; }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { font-size: 12px; color: var(--muted); }
+    .stat-value { font-size: 14px; font-weight: 700; color: var(--text); }
+    .stat-value.big { font-size: 18px; }
+
+    .stat-return {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .return-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .return-green { color: var(--green); }
+    .return-yellow { color: var(--yellow); }
+    .return-red   { color: var(--red); }
+    .return-muted { color: var(--muted); }
+    .dot-green  { background: var(--green); }
+    .dot-yellow { background: var(--yellow); }
+    .dot-red    { background: var(--red); }
+    .dot-muted  { background: var(--muted); }
+
+    .section-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px 0;
+    }
+
+    /* Comparison table for all weeks */
+    .comparison-wrap {
+      overflow-x: auto;
+      margin-top: 32px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .comparison-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      margin-top: 32px;
+    }
+    table.comp {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+    table.comp thead tr { background: #13161f; }
+    table.comp thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    table.comp thead th:first-child { width: 200px; }
+    table.comp tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+    table.comp tbody tr:last-child { border-bottom: none; }
+    table.comp tbody tr:hover { background: #1e2130; }
+    table.comp td {
+      padding: 10px 14px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    table.comp td.row-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    table.comp td.section-head {
+      background: #13161f;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      padding: 8px 14px;
+    }
+    table.comp td.pending { color: var(--muted); font-style: italic; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 11px;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🏇 Voltstart</h1>
+    <div style="font-size:1.2rem;font-weight:700;color:#e05252;letter-spacing:0.02em;margin-top:0;margin-left:1.8em;">
+      Fyraveckorsanalys
+    </div>
+  </div>
+  <a href="/" class="nav-link">← Tillbaka till dagslistan</a>
+</header>
+
+<main>
+  <div class="page-title">Fyraveckorsanalys – Voltstart spår 1</div>
+  <div class="page-subtitle">
+    Ackumulerat resultat · 21 april – 17 maj 2026 · Totalt <strong style="color:var(--text)">{{ total }}</strong> lopp insamlade
+  </div>
+
+  <div class="info-box">
+    <strong>Hur läser man statistiken?</strong><br>
+    Varje häst på spår&nbsp;1 i ett voltstart-lopp räknas som ett "spel" (insats&nbsp;1&nbsp;kr).
+    <strong>Snitt platsavkastning</strong> = summa utbetalda platsodds (top&nbsp;3) ÷ alla hästar.
+    <strong>Snitt vinnaravkastning</strong> = summa utbetalda vinnarodds ÷ alla hästar.
+    Värde &gt;&nbsp;1,00 = lönsam strategi i snitt.<br>
+    <strong>Filtrerade kuskar:</strong> Exkluderar kuskar som under 2025 eller 2026 (i år med starter) haft under 20&nbsp;% top‑3‑placeringar.
+  </div>
+
+  {% if total == 0 %}
+  <div class="no-data-box">
+    <h2>Inga lopp registrerade ännu</h2>
+    <p>Datainsamlingen startar 21 april 2026. Kom tillbaka efter att första loppet är kört.</p>
+  </div>
+  {% endif %}
+
+  {% for w in weeks %}
+  <div class="week-section">
+    <div class="week-header">
+      <span class="week-title">{{ w.label }}</span>
+      <span class="week-period">Ackumulerat t.o.m. {{ w.end }}</span>
+      {% if w.complete %}
+        <span class="badge badge-done">Avslutat</span>
+      {% elif w.active %}
+        <span class="badge badge-active">Pågående</span>
+      {% else %}
+        <span class="badge badge-future">Kommande</span>
+      {% endif %}
+      <span class="report-note">Rapport: {{ w.report }}</span>
+    </div>
+
+    <div class="stats-grid">
+
+      <!-- Alla kuskar -->
+      <div class="stats-card">
+        <div class="stats-card-header">Alla kuskar</div>
+        <div class="stats-card-body">
+          <div class="stat-row">
+            <span class="stat-label">Antal hästar (kumulativt)</span>
+            <span class="stat-value big">{{ w.all.count }}</span>
+          </div>
+
+          <div class="stat-row" style="background:#12151e;">
+            <span class="stat-label" style="font-weight:600;color:var(--text)">Platsodds (utbet.)</span>
+            <span></span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Summa platsodds</span>
+            <span class="stat-value">
+              {% if w.all.count > 0 %}{{ "%.2f"|format(w.all.sum_place) }}{% else %}<span style="color:var(--muted)">–</span>{% endif %}
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Snitt platsavkastning / häst</span>
+            {% if w.all.avg_place is not none and w.all.count > 0 %}
+              {% set ap = w.all.avg_place %}
+              {% if ap >= 1.0 %}
+                <span class="stat-value stat-return return-green">
+                  <span class="return-dot dot-green"></span>{{ "%.3f"|format(ap) }}
+                </span>
+              {% elif ap >= 0.7 %}
+                <span class="stat-value stat-return return-yellow">
+                  <span class="return-dot dot-yellow"></span>{{ "%.3f"|format(ap) }}
+                </span>
+              {% else %}
+                <span class="stat-value stat-return return-red">
+                  <span class="return-dot dot-red"></span>{{ "%.3f"|format(ap) }}
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="stat-value return-muted">–</span>
+            {% endif %}
+          </div>
+
+          <div class="stat-row" style="background:#12151e;">
+            <span class="stat-label" style="font-weight:600;color:var(--text)">Vinnarodds (utbet.)</span>
+            <span></span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Summa vinnarodds</span>
+            <span class="stat-value">
+              {% if w.all.count > 0 %}{{ "%.2f"|format(w.all.sum_win) }}{% else %}<span style="color:var(--muted)">–</span>{% endif %}
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Snitt vinnaravkastning / häst</span>
+            {% if w.all.avg_win is not none and w.all.count > 0 %}
+              {% set aw = w.all.avg_win %}
+              {% if aw >= 1.0 %}
+                <span class="stat-value stat-return return-green">
+                  <span class="return-dot dot-green"></span>{{ "%.3f"|format(aw) }}
+                </span>
+              {% elif aw >= 0.7 %}
+                <span class="stat-value stat-return return-yellow">
+                  <span class="return-dot dot-yellow"></span>{{ "%.3f"|format(aw) }}
+                </span>
+              {% else %}
+                <span class="stat-value stat-return return-red">
+                  <span class="return-dot dot-red"></span>{{ "%.3f"|format(aw) }}
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="stat-value return-muted">–</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtrerade kuskar -->
+      <div class="stats-card">
+        <div class="stats-card-header filtered">Filtrerade kuskar (top3 ≥ 20 %)</div>
+        <div class="stats-card-body">
+          <div class="stat-row">
+            <span class="stat-label">Antal hästar (kumulativt)</span>
+            <span class="stat-value big">{{ w.filtered.count }}</span>
+          </div>
+
+          <div class="stat-row" style="background:#12151e;">
+            <span class="stat-label" style="font-weight:600;color:var(--text)">Platsodds (utbet.)</span>
+            <span></span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Summa platsodds</span>
+            <span class="stat-value">
+              {% if w.filtered.count > 0 %}{{ "%.2f"|format(w.filtered.sum_place) }}{% else %}<span style="color:var(--muted)">–</span>{% endif %}
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Snitt platsavkastning / häst</span>
+            {% if w.filtered.avg_place is not none and w.filtered.count > 0 %}
+              {% set ap = w.filtered.avg_place %}
+              {% if ap >= 1.0 %}
+                <span class="stat-value stat-return return-green">
+                  <span class="return-dot dot-green"></span>{{ "%.3f"|format(ap) }}
+                </span>
+              {% elif ap >= 0.7 %}
+                <span class="stat-value stat-return return-yellow">
+                  <span class="return-dot dot-yellow"></span>{{ "%.3f"|format(ap) }}
+                </span>
+              {% else %}
+                <span class="stat-value stat-return return-red">
+                  <span class="return-dot dot-red"></span>{{ "%.3f"|format(ap) }}
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="stat-value return-muted">–</span>
+            {% endif %}
+          </div>
+
+          <div class="stat-row" style="background:#12151e;">
+            <span class="stat-label" style="font-weight:600;color:var(--text)">Vinnarodds (utbet.)</span>
+            <span></span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Summa vinnarodds</span>
+            <span class="stat-value">
+              {% if w.filtered.count > 0 %}{{ "%.2f"|format(w.filtered.sum_win) }}{% else %}<span style="color:var(--muted)">–</span>{% endif %}
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Snitt vinnaravkastning / häst</span>
+            {% if w.filtered.avg_win is not none and w.filtered.count > 0 %}
+              {% set aw = w.filtered.avg_win %}
+              {% if aw >= 1.0 %}
+                <span class="stat-value stat-return return-green">
+                  <span class="return-dot dot-green"></span>{{ "%.3f"|format(aw) }}
+                </span>
+              {% elif aw >= 0.7 %}
+                <span class="stat-value stat-return return-yellow">
+                  <span class="return-dot dot-yellow"></span>{{ "%.3f"|format(aw) }}
+                </span>
+              {% else %}
+                <span class="stat-value stat-return return-red">
+                  <span class="return-dot dot-red"></span>{{ "%.3f"|format(aw) }}
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="stat-value return-muted">–</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /stats-grid -->
+  </div><!-- /week-section -->
+  {% endfor %}
+
+  <!-- Jämförelsetabell: alla veckor i en vy -->
+  {% if total > 0 %}
+  <div class="comparison-title">Samlad jämförelse – alla veckor</div>
+  <div class="comparison-wrap">
+    <table class="comp">
+      <thead>
+        <tr>
+          <th>Nyckeltal</th>
+          {% for w in weeks %}<th>{{ w.label }} (t.o.m. {{ w.end }})</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="section-head" colspan="{{ weeks|length + 1 }}">Alla kuskar</td></tr>
+        <tr>
+          <td class="row-label">Antal hästar</td>
+          {% for w in weeks %}
+          <td>{% if w.all.count > 0 %}{{ w.all.count }}{% else %}<span class="pending">–</span>{% endif %}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Summa platsodds</td>
+          {% for w in weeks %}
+          <td>{% if w.all.count > 0 %}{{ "%.2f"|format(w.all.sum_place) }}{% else %}<span class="pending">–</span>{% endif %}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Snitt platsavkastning</td>
+          {% for w in weeks %}
+          <td>
+            {% if w.all.avg_place is not none and w.all.count > 0 %}
+              {% set ap = w.all.avg_place %}
+              <span class="{% if ap >= 1.0 %}return-green{% elif ap >= 0.7 %}return-yellow{% else %}return-red{% endif %}">
+                {{ "%.3f"|format(ap) }}
+              </span>
+            {% else %}<span class="pending">–</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Summa vinnarodds</td>
+          {% for w in weeks %}
+          <td>{% if w.all.count > 0 %}{{ "%.2f"|format(w.all.sum_win) }}{% else %}<span class="pending">–</span>{% endif %}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Snitt vinnaravkastning</td>
+          {% for w in weeks %}
+          <td>
+            {% if w.all.avg_win is not none and w.all.count > 0 %}
+              {% set aw = w.all.avg_win %}
+              <span class="{% if aw >= 1.0 %}return-green{% elif aw >= 0.7 %}return-yellow{% else %}return-red{% endif %}">
+                {{ "%.3f"|format(aw) }}
+              </span>
+            {% else %}<span class="pending">–</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+
+        <tr><td class="section-head" colspan="{{ weeks|length + 1 }}">Filtrerade kuskar (top3 ≥ 20 %)</td></tr>
+        <tr>
+          <td class="row-label">Antal hästar</td>
+          {% for w in weeks %}
+          <td>{% if w.filtered.count > 0 %}{{ w.filtered.count }}{% else %}<span class="pending">–</span>{% endif %}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Summa platsodds</td>
+          {% for w in weeks %}
+          <td>{% if w.filtered.count > 0 %}{{ "%.2f"|format(w.filtered.sum_place) }}{% else %}<span class="pending">–</span>{% endif %}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Snitt platsavkastning</td>
+          {% for w in weeks %}
+          <td>
+            {% if w.filtered.avg_place is not none and w.filtered.count > 0 %}
+              {% set ap = w.filtered.avg_place %}
+              <span class="{% if ap >= 1.0 %}return-green{% elif ap >= 0.7 %}return-yellow{% else %}return-red{% endif %}">
+                {{ "%.3f"|format(ap) }}
+              </span>
+            {% else %}<span class="pending">–</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Summa vinnarodds</td>
+          {% for w in weeks %}
+          <td>{% if w.filtered.count > 0 %}{{ "%.2f"|format(w.filtered.sum_win) }}{% else %}<span class="pending">–</span>{% endif %}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td class="row-label">Snitt vinnaravkastning</td>
+          {% for w in weeks %}
+          <td>
+            {% if w.filtered.avg_win is not none and w.filtered.count > 0 %}
+              {% set aw = w.filtered.avg_win %}
+              <span class="{% if aw >= 1.0 %}return-green{% elif aw >= 0.7 %}return-yellow{% else %}return-red{% endif %}">
+                {{ "%.3f"|format(aw) }}
+              </span>
+            {% else %}<span class="pending">–</span>{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</main>
+
+<footer>
+  Data från ATG · Analysperiod 21 apr – 17 maj 2026 · Voltstart spår 1
+</footer>
+
+</body>
+</html>

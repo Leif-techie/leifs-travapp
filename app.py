@@ -1,4 +1,5 @@
 import os
+import sqlite3
 import time
 import threading
 from datetime import datetime, date
@@ -10,6 +11,17 @@ app = Flask(__name__)
 ATG_BASE = "https://www.atg.se/services/racinginfo/v1/api"
 HEADERS = {"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
 CACHE_TTL = 3 * 60 * 60  # 3 timmar i sekunder
+
+_data_dir = os.environ.get("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(_data_dir, "race_history.db")
+ANALYSIS_START = "2026-04-21"
+ANALYSIS_END = "2026-05-17"
+WEEK_RANGES = [
+    {"label": "Vecka 1", "end": "2026-04-27", "report": "Tis 28 apr kl 08:00"},
+    {"label": "Vecka 2", "end": "2026-05-04", "report": "Tis 5 maj kl 08:00"},
+    {"label": "Vecka 3", "end": "2026-05-11", "report": "Tis 12 maj kl 08:00"},
+    {"label": "Vecka 4", "end": "2026-05-17", "report": "Mån 18 maj kl 08:00"},
+]
 
 _cache = {"data": None, "timestamp": 0, "last_updated": None, "error": None}
 _lock = threading.Lock()
@@ -30,7 +42,7 @@ def format_pct(numerator, denominator):
 
 
 def driver_stats(driver):
-    """Returnerar (seger%25, top3%25, seger%26, top3%26) som strängar."""
+    """Returnerar seger%, top3%, starter och råvärde för top3% per år."""
     result = {}
     stats = driver.get("statistics", {}).get("years", {})
     for year in ["2025", "2026"]:
@@ -45,6 +57,7 @@ def driver_stats(driver):
         result[f"win_pct_{year}"] = format_pct(wins, starts)
         result[f"top3_pct_{year}"] = format_pct(top3, starts)
         result[f"starts_{year}"] = starts
+        result[f"top3_raw_{year}"] = round(top3 / starts * 100, 1) if starts > 0 else None
     return result
 
 
@@ -189,6 +202,8 @@ def fetch_todays_races():
                 "top3_pct_2026": dstats["top3_pct_2026"],
                 "driver_starts_2025": dstats["starts_2025"],
                 "driver_starts_2026": dstats["starts_2026"],
+                "top3_raw_2025": dstats["top3_raw_2025"],
+                "top3_raw_2026": dstats["top3_raw_2026"],
                 "recent_records": recent,
                 "avg_odds_last5": avg_odds_str,
                 "result_place": result_place,
@@ -203,6 +218,149 @@ def fetch_todays_races():
     return rows, None
 
 
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS race_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            race_date TEXT NOT NULL,
+            track TEXT,
+            race_number INTEGER,
+            race_time TEXT,
+            horse_name TEXT,
+            driver_name TEXT,
+            driver_top3_2025 REAL,
+            driver_top3_2026 REAL,
+            driver_starts_2025 INTEGER,
+            driver_starts_2026 INTEGER,
+            result_place INTEGER,
+            paid_win_odds REAL,
+            paid_place_odds REAL,
+            result_galloped INTEGER,
+            UNIQUE(race_date, track, race_number, horse_name)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def _to_float(v):
+    if v is None or v == "-":
+        return None
+    try:
+        return float(v)
+    except Exception:
+        return None
+
+
+def store_completed_races(rows, race_date):
+    """Sparar avslutade lopp (med resultat) till historikdatabasen."""
+    if not rows:
+        return 0
+    conn = sqlite3.connect(DB_PATH)
+    stored = 0
+    for r in rows:
+        if r.get("result_place") is None:
+            continue
+        try:
+            conn.execute("""
+                INSERT OR IGNORE INTO race_history
+                (race_date, track, race_number, race_time, horse_name, driver_name,
+                 driver_top3_2025, driver_top3_2026, driver_starts_2025, driver_starts_2026,
+                 result_place, paid_win_odds, paid_place_odds, result_galloped)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                race_date,
+                r.get("track"), r.get("race_number"), r.get("race_time"),
+                r.get("horse_name"), r.get("driver_name"),
+                r.get("top3_raw_2025"), r.get("top3_raw_2026"),
+                r.get("driver_starts_2025"), r.get("driver_starts_2026"),
+                r.get("result_place"),
+                _to_float(r.get("result_win_odds")),
+                _to_float(r.get("result_place_odds")),
+                1 if r.get("result_galloped") else 0,
+            ))
+            stored += 1
+        except Exception:
+            pass
+    conn.commit()
+    conn.close()
+    return stored
+
+
+def calc_stats(rows):
+    """Beräknar ackumulerad avkastning för en lista av lopp."""
+    n = len(rows)
+    if n == 0:
+        return {"count": 0, "sum_place": 0.0, "avg_place": None, "sum_win": 0.0, "avg_win": None}
+    sum_place = 0.0
+    sum_win = 0.0
+    for r in rows:
+        place = r.get("result_place")
+        galloped = r.get("result_galloped", 0)
+        if place is not None and 1 <= int(place) <= 3 and not galloped:
+            sum_place += r.get("paid_place_odds") or 0.0
+        if place is not None and int(place) == 1 and not galloped:
+            sum_win += r.get("paid_win_odds") or 0.0
+    return {
+        "count": n,
+        "sum_place": round(sum_place, 2),
+        "avg_place": round(sum_place / n, 3),
+        "sum_win": round(sum_win, 2),
+        "avg_win": round(sum_win / n, 3),
+    }
+
+
+def filter_by_driver_quality(rows):
+    """Behåller bara hästar vars kusk har top3% ≥ 20% i alla år med starter."""
+    result = []
+    for r in rows:
+        t25 = r.get("driver_top3_2025")
+        t26 = r.get("driver_top3_2026")
+        s25 = r.get("driver_starts_2025") or 0
+        s26 = r.get("driver_starts_2026") or 0
+        exclude = False
+        if s25 > 0 and (t25 is None or t25 < 20.0):
+            exclude = True
+        if s26 > 0 and (t26 is None or t26 < 20.0):
+            exclude = True
+        if not exclude:
+            result.append(r)
+    return result
+
+
+def get_weekly_stats():
+    """Hämtar ackumulerade veckostatistik för analysperioden."""
+    today = date.today().isoformat()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT * FROM race_history WHERE race_date >= ? AND race_date <= ? ORDER BY race_date",
+            (ANALYSIS_START, ANALYSIS_END),
+        )
+        all_rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+    except Exception:
+        all_rows = []
+
+    weeks = []
+    for w in WEEK_RANGES:
+        cum = [r for r in all_rows if r["race_date"] <= w["end"]]
+        filtered = filter_by_driver_quality(cum)
+        weeks.append({
+            "label": w["label"],
+            "end": w["end"],
+            "report": w["report"],
+            "complete": today > w["end"],
+            "active": ANALYSIS_START <= today <= w["end"],
+            "all": calc_stats(cum),
+            "filtered": calc_stats(filtered),
+        })
+    return weeks, len(all_rows)
+
+
 def refresh_cache():
     rows, error = fetch_todays_races()
     with _lock:
@@ -210,6 +368,9 @@ def refresh_cache():
         _cache["error"] = error
         _cache["timestamp"] = time.time()
         _cache["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    today_str = date.today().isoformat()
+    if ANALYSIS_START <= today_str <= ANALYSIS_END:
+        store_completed_races(rows or [], today_str)
 
 
 def get_cached_data():
@@ -233,8 +394,9 @@ def background_refresh():
 
 
 def ensure_started():
-    """Initierar cache och bakgrundsuppdatering en gång per process."""
+    """Initierar DB, cache och bakgrundsuppdatering en gång per process."""
     global _refresh_thread_started
+    init_db()
     with _lock:
         needs_refresh = _cache["data"] is None
         if _refresh_thread_started:
@@ -279,6 +441,20 @@ def api_refresh():
     refresh_cache()
     with _lock:
         return jsonify({"ok": True, "last_updated": _cache["last_updated"]})
+
+
+@app.route("/stats")
+def stats_page():
+    ensure_started()
+    weeks, total = get_weekly_stats()
+    return render_template(
+        "stats.html",
+        weeks=weeks,
+        total=total,
+        today=date.today().strftime("%Y-%m-%d"),
+        analysis_start=ANALYSIS_START,
+        analysis_end=ANALYSIS_END,
+    )
 
 
 if __name__ == "__main__":

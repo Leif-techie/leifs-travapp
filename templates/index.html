@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trav – Voltstart spioner (nr 1)</title>
+  <title>Trav – Voltstart spår 1</title>
   <style>
     :root {
       --bg: #0f1117;
@@ -237,6 +237,26 @@
     .form-meta { color: var(--muted); }
     .no-form { color: var(--muted); font-size: 11px; font-style: italic; }
 
+    tbody tr.race-past {
+      opacity: 0.45;
+    }
+    tbody tr.race-past td {
+      text-decoration: none;
+    }
+    .past-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      background: #2a2d3a;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 5px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -278,6 +298,7 @@
     <button class="btn" id="refresh-btn" onclick="manualRefresh()">
       <span id="refresh-icon">↻</span> Uppdatera nu
     </button>
+    <a href="/stats" class="btn" style="text-decoration:none">📊 Fyraveckorsanalys</a>
   </div>
 </header>
 
@@ -480,6 +501,34 @@
 
     rows.forEach(r => tbody.appendChild(r));
   }
+
+  function markPastRaces() {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+    document.querySelectorAll('tbody tr').forEach(row => {
+      const timeCell = row.querySelector('td:nth-child(2)');
+      if (!timeCell) return;
+      const timeText = timeCell.textContent.trim(); // HH:MM
+      if (!/^\d{2}:\d{2}$/.test(timeText)) return;
+      const raceDate = new Date(`${todayStr}T${timeText}:00`);
+      if (now > raceDate) {
+        row.classList.add('race-past');
+        if (!timeCell.querySelector('.past-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'past-badge';
+          badge.textContent = 'AVSLUTAT';
+          timeCell.appendChild(badge);
+        }
+      } else {
+        row.classList.remove('race-past');
+        const badge = timeCell.querySelector('.past-badge');
+        if (badge) badge.remove();
+      }
+    });
+  }
+
+  markPastRaces();
+  setInterval(markPastRaces, 30000);
 
   document.addEventListener('click', function(e) {
     const el = e.target.closest('.horse-link');
